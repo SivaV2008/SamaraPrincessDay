@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Princess Sortie</title>
+<meta name="description" content="A five-question daily sortie for National Princess Day.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%91%91%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=Nunito+Sans:wght@400;600;800&display=swap">
+<style>
+/* Layout: one centered card column; a question "sortie" ticket with a guess field, then a ranked reveal board */
+:root {
+  --bg: #fff4f7;
+  --surface: #ffffff;
+  --ink: #3b1531;
+  --muted: #8b6079;
+  --accent: #d1336b;
+  --accent-ink: #ffffff;
+  --gold: #b07f1e;
+  --line: #f0d2de;
+  --soft: #fde6ee;
+  --bad: #b3261e;
+  --display: "Fraunces", Georgia, "Times New Roman", serif;
+  --body: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c0e17; --surface: #2a1622; --ink: #fbe8f0; --muted: #c49ab1;
+    --accent: #ff78a6; --accent-ink: #2a0b1b; --gold: #e8c06a; --line: #4a2a3d; --soft: #3a1d2e; --bad: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1c0e17; --surface: #2a1622; --ink: #fbe8f0; --muted: #c49ab1;
+  --accent: #ff78a6; --accent-ink: #2a0b1b; --gold: #e8c06a; --line: #4a2a3d; --soft: #3a1d2e; --bad: #ff8a80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+  background-image: radial-gradient(var(--line) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+header { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.crown { width: 54px; height: 40px; color: var(--gold); }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(34px, 8vw, 46px); line-height: 1.05; margin: 0; text-wrap: balance; }
+h1 em { font-style: italic; font-weight: 500; color: var(--accent); }
+
+.pips { display: flex; gap: 8px; justify-content: center; }
+.pip { width: 34px; height: 8px; border-radius: 99px; background: var(--line); transition: background .3s; }
+.pip.on { background: var(--accent); }
+.pip.done { background: var(--gold); }
+
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  padding: 26px 22px;
+  box-shadow: 0 10px 30px -18px rgba(120, 20, 70, .35);
+  display: flex; flex-direction: column; gap: 16px;
+}
+.qnum { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.qtext { font-family: var(--display); font-size: clamp(24px, 6vw, 30px); line-height: 1.15; margin: 0; text-wrap: balance; }
+.hint { color: var(--muted); font-size: 14px; margin: 0; }
+
+.field { position: relative; display: flex; gap: 8px; }
+.field input {
+  flex: 1; min-width: 0;
+  font: inherit; font-size: 17px; color: var(--ink);
+  background: var(--bg);
+  border: 2px solid var(--line); border-radius: 14px;
+  padding: 13px 14px;
+  outline: none;
+}
+.field input:focus { border-color: var(--accent); }
+button {
+  font: inherit; font-weight: 800; cursor: pointer;
+  border: 0; border-radius: 14px; padding: 13px 18px;
+  background: var(--accent); color: var(--accent-ink);
+}
+button:focus-visible, .sug li:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+button.ghost { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+
+.sug {
+  list-style: none; margin: 0; padding: 6px;
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5;
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px;
+  box-shadow: 0 14px 30px -14px rgba(60, 10, 40, .4);
+}
+.sug li { padding: 10px 12px; border-radius: 10px; cursor: pointer; }
+.sug li.act, .sug li:hover { background: var(--soft); }
+
+.msg { min-height: 1.5em; font-size: 14px; font-weight: 600; margin: 0; }
+.msg.err { color: var(--bad); }
+.msg.fix { color: var(--gold); }
+.shake { animation: shake .35s; }
+@keyframes shake { 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+
+.board { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.row {
+  display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px;
+  padding: 11px 14px; border-radius: 12px; background: var(--bg); border: 1.5px solid var(--line);
+}
+.row .rk { font-family: var(--display); font-weight: 700; color: var(--muted); }
+.row .nm { min-width: 0; font-weight: 600; }
+.row .pts { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--muted); }
+.row.top { border-color: var(--gold); }
+.row.top .rk { color: var(--gold); }
+.row.mine { background: var(--soft); border-color: var(--accent); }
+.row.mine .pts { color: var(--accent); }
+.row .you { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-left: 6px; }
+.gap { text-align: center; color: var(--muted); font-size: 13px; }
+
+.sky {
+  position: relative; height: 230px; overflow: hidden;
+  border-radius: 16px; border: 1.5px solid var(--line);
+  background: linear-gradient(to top, var(--soft), var(--bg) 85%);
+}
+.tick { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line); font-size: 11px; font-weight: 800; color: var(--muted); padding: 2px 10px; font-variant-numeric: tabular-nums; }
+.tick.max { border-top: 2px solid var(--gold); color: var(--gold); }
+.streak { position: absolute; left: 50%; bottom: 14px; width: 12px; margin-left: -6px; height: 0; border-radius: 6px; background: linear-gradient(to top, transparent, var(--accent)); opacity: .55; }
+.lcrown { position: absolute; left: 50%; bottom: 14px; width: 60px; height: 45px; margin-left: -30px; color: var(--gold); transform-origin: 50% 100%; will-change: transform; }
+.lcrown.glow { filter: drop-shadow(0 0 10px var(--gold)); }
+.spark { position: absolute; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; }
+.verdict { font-family: var(--display); font-size: 22px; margin: 0; }
+.verdict .score { color: var(--accent); }
+
+.total { font-family: var(--display); font-size: 64px; line-height: 1; font-weight: 700; color: var(--accent); text-align: center; font-variant-numeric: tabular-nums; }
+.total small { font-size: 22px; color: var(--muted); }
+.grid { font-size: 30px; letter-spacing: 4px; text-align: center; }
+.summary { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.summary li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 15px; }
+.summary li span:first-child { min-width: 0; }
+.summary b { font-variant-numeric: tabular-nums; }
+.letter { font-family: var(--display); font-style: italic; font-size: 19px; text-align: center; margin: 0; text-wrap: balance; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+footer { text-align: center; color: var(--muted); font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) { .shake { animation: none; } .pip { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <svg class="crown" viewBox="0 0 54 40" aria-hidden="true"><path fill="currentColor" d="M4 12l11 10L27 4l12 18 11-10-5 22H9z"/><rect x="9" y="35" width="36" height="4" rx="2" fill="currentColor"/><circle cx="4" cy="11" r="3" fill="currentColor"/><circle cx="27" cy="4" r="3" fill="currentColor"/><circle cx="50" cy="11" r="3" fill="currentColor"/></svg>
+    <div class="eyebrow">Daily Sortie · National Princess Day · Nov 18</div>
+    <h1>The <em>Princess</em> Sortie</h1>
+  </header>
+  <div class="pips" id="pips" aria-hidden="true"></div>
+  <main id="stage"></main>
+  <footer>Five questions. Guess the closest answer. The top answer is worth 100.</footer>
+</div>
+
+<script>
+// ---------- data ----------
+// Each option: [display name, [aliases], rank]. Lower rank = better. Points come from rank.
+const QUESTIONS = [
+  {
+    q: "What's Samara's Starbucks order?",
+    hint: "Think about what she actually orders.",
+    options: [
+      ["Pink Lemonade", ["pink lemonade", "lemonade", "pink lemonaid"], 1],
+      ["Iced Vanilla Latte", ["ice vanilla latte", "vanilla latte", "iced vanilla", "vanilla iced latte"], 2],
+      ["Pink Drink", [], 3],
+      ["Strawberry Açaí Refresher", ["strawberry acai refresher", "strawberry acai", "refresher"], 4],
+      ["Caramel Frappuccino", ["caramel frap", "frappuccino", "frappe"], 5],
+      ["Matcha Latte", ["matcha", "iced matcha"], 6],
+      ["Pumpkin Spice Latte", ["psl", "pumpkin spice"], 7],
+      ["Chai Tea Latte", ["chai", "chai latte"], 8],
+      ["Caramel Macchiato", ["macchiato"], 9],
+      ["Cold Brew", [], 10],
+      ["Peppermint Mocha", ["mocha"], 11],
+      ["Hot Chocolate", ["hot cocoa"], 12],
+      ["Americano", [], 13],
+      ["Black Coffee", ["coffee", "drip coffee"], 14],
+    ],
+  },
+  {
+    q: "What's her favorite subject?",
+    hint: "The closest answer wins.",
+    options: [
+      ["Biology", ["bio"], 1],
+      ["Chemistry", ["chem"], 2],
+      ["English", ["ela", "literature"], 3],
+      ["Psychology", ["psych"], 4],
+      ["Anatomy", [], 5],
+      ["Math", ["maths", "mathematics", "calculus", "calc"], 6],
+      ["Physics", [], 7],
+      ["History", [], 8],
+      ["Spanish", [], 9],
+      ["Art", [], 10],
+      ["Music", [], 11],
+      ["Economics", ["econ"], 12],
+      ["Computer Science", ["cs", "coding", "comp sci"], 13],
+      ["Gym Class", ["pe", "p.e."], 14],
+    ],
+  },
+  {
+    q: "What's her favorite hobby?",
+    hint: "Two answers are tied for the top spot.",
+    options: [
+      ["Poetry", ["poems", "writing poetry", "poem", "writing poems"], 1],
+      ["Guitar", ["guitary", "playing guitar", "playing the guitar"], 1],
+      ["Gym (jk)", ["gym", "the gym", "working out", "workout", "lifting"], 3],
+      ["Reading", ["books"], 4],
+      ["Singing", [], 5],
+      ["Journaling", ["journal"], 6],
+      ["Painting", [], 7],
+      ["Baking", [], 8],
+      ["Shopping", [], 9],
+      ["Dancing", ["dance"], 10],
+      ["Watching TikToks", ["tiktok", "tik tok", "scrolling"], 11],
+      ["Sleeping", ["sleep", "napping"], 12],
+      ["Video Games", ["gaming", "games"], 13],
+    ],
+  },
+  {
+    q: "What does she like being called?",
+    hint: "Choose wisely.",
+    options: [
+      ["Princess", [], 1],
+      ["Sammy", ["sami", "sammie"], 2],
+      ["Samara", [], 3],
+      ["Sam", [], 4],
+      ["Babe", [], 5],
+      ["Baby", [], 6],
+      ["Sweetheart", [], 7],
+      ["Honey", [], 8],
+      ["Bestie", [], 9],
+      ["Dude", [], 10],
+      ["Bro", [], 11],
+      ["Ma'am", ["maam"], 12],
+    ],
+  },
+  {
+    q: "Who is the best girlfriend in the world?",
+    hint: "There is only one right answer.",
+    only: true,
+    options: [
+      ["Samara", ["sammy", "princess", "me", "samara!"], 1],
+      ["Taylor Swift", ["taylor"], 2],
+      ["Beyoncé", ["beyonce"], 3],
+      ["Zendaya", [], 4],
+      ["Hermione Granger", ["hermione"], 5],
+      ["Literally anyone else", ["anyone else", "someone else", "nobody", "no one"], 6],
+    ],
+  },
+];
+
+const RANK_POINTS = [0, 100, 75, 50, 40, 35, 30, 25, 20, 15, 10, 10, 5, 5, 5, 5];
+function pointsFor(question, rank) {
+  if (question.only) return rank === 1 ? 100 : 0;
+  return RANK_POINTS[rank] ?? 5;
+}
+
+// ---------- matching / autocorrect ----------
+const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+function lev(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+function keysOf(opt) { return [opt[0], ...opt[1]].map(norm); }
+
+// Returns {opt, corrected} | {ambiguous:[opts]} | null
+function resolve(question, raw) {
+  const t = norm(raw);
+  if (!t) return null;
+  const opts = question.options;
+  // 1. exact name or alias
+  for (const o of opts) if (keysOf(o).includes(t)) return { opt: o, corrected: norm(o[0]) !== t && !o[1].map(norm).includes(t) };
+  // 2. unique prefix of a name/alias (3+ chars)
+  if (t.length >= 3) {
+    const hits = opts.filter(o => keysOf(o).some(k => k.startsWith(t)));
+    if (hits.length === 1) return { opt: hits[0], corrected: true };
+    if (hits.length > 1) return { ambiguous: hits };
+  }
+  // 3. typo distance, also allowing near-prefix (e.g. "pnk lem")
+  let best = null, bestD = Infinity;
+  for (const o of opts) {
+    for (const k of keysOf(o)) {
+      const allow = Math.min(3, Math.max(1, Math.floor(k.length / 4)));
+      const d = lev(t, k);
+      const pAllow = Math.max(1, Math.floor(t.length / 5));
+      const dp = t.length >= 5 && t.length < k.length ? lev(t, k.slice(0, t.length)) : Infinity;
+      const score = d <= allow ? d : dp <= pAllow ? dp + 0.5 : Infinity;
+      if (score < bestD) { best = o; bestD = score; }
+    }
+  }
+  return best ? { opt: best, corrected: true } : null;
+}
+
+function suggestions(question, raw) {
+  const t = norm(raw);
+  if (!t) return [];
+  const scored = [];
+  for (const o of question.options) {
+    let s = Infinity;
+    for (const k of keysOf(o)) {
+      if (k.startsWith(t)) s = Math.min(s, 0);
+      else if (k.includes(t)) s = Math.min(s, 1);
+      else if (t.length >= 3) {
+        const d = Math.min(lev(t, k), lev(t, k.slice(0, t.length)));
+        if (d <= Math.max(1, Math.floor(t.length / 3))) s = Math.min(s, 2 + d);
+      }
+    }
+    if (s < Infinity) scored.push([s, o]);
+  }
+  scored.sort((a, b) => a[0] - b[0] || a[1][0].localeCompare(b[1][0]));
+  return scored.slice(0, 6).map(x => x[1]);
+}
+
+// ---------- game state ----------
+let idx = 0;
+let results = []; // {opt, pts}
+const stage = document.getElementById("stage");
+const pips = document.getElementById("pips");
+
+function drawPips() {
+  pips.innerHTML = QUESTIONS.map((_, i) =>
+    `<span class="pip ${i < results.length ? "done" : i === idx ? "on" : ""}"></span>`).join("");
+}
+
+const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function renderQuestion() {
+  drawPips();
+  const Q = QUESTIONS[idx];
+  stage.innerHTML = `
+    <section class="card">
+      <div class="qnum">Question ${idx + 1} of ${QUESTIONS.length}</div>
+      <h2 class="qtext">${esc(Q.q)}</h2>
+      <p class="hint">${esc(Q.hint)} Only answers on the list count, and typos get fixed for you.</p>
+      <form id="f" class="field" autocomplete="off">
+        <input id="guess-${idx}" type="text" placeholder="Type your guess…" aria-label="Your guess" autocapitalize="off" spellcheck="false">
+        <button type="submit">Guess</button>
+        <ul class="sug" id="sug" role="listbox" hidden></ul>
+      </form>
+      <p class="msg" id="msg" role="status"></p>
+    </section>`;
+  const f = document.getElementById("f");
+  const input = f.querySelector("input");
+  const sug = document.getElementById("sug");
+  const msg = document.getElementById("msg");
+  let list = [], act = -1;
+
+  function drawSug() {
+    list = suggestions(Q, input.value);
+    act = -1;
+    if (!list.length) { sug.hidden = true; return; }
+    sug.innerHTML = list.map((o, i) => `<li role="option" data-i="${i}">${esc(o[0])}</li>`).join("");
+    sug.hidden = false;
+  }
+  function setAct(n) {
+    act = n;
+    [...sug.children].forEach((li, i) => li.classList.toggle("act", i === act));
+  }
+  input.addEventListener("input", () => { msg.textContent = ""; msg.className = "msg"; drawSug(); });
+  input.addEventListener("keydown", e => {
+    if (sug.hidden) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setAct((act + 1) % list.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setAct((act - 1 + list.length) % list.length); }
+    else if (e.key === "Escape") { sug.hidden = true; }
+    else if (e.key === "Enter" && act >= 0) { e.preventDefault(); input.value = list[act][0]; sug.hidden = true; }
+  });
+  sug.addEventListener("mousedown", e => {
+    const li = e.target.closest("li"); if (!li) return;
+    e.preventDefault();
+    input.value = list[+li.dataset.i][0];
+    sug.hidden = true;
+    input.focus();
+  });
+  input.addEventListener("blur", () => setTimeout(() => (sug.hidden = true), 120));
+
+  f.addEventListener("submit", e => {
+    e.preventDefault();
+    sug.hidden = true;
+    const r = resolve(Q, input.value);
+    if (!r) {
+      msg.className = "msg err";
+      msg.textContent = input.value.trim()
+        ? `"${input.value.trim()}" isn't one of the answers. Try something else.`
+        : "Type a guess first.";
+      f.classList.remove("shake"); void f.offsetWidth; f.classList.add("shake");
+      return;
+    }
+    if (r.ambiguous) {
+      msg.className = "msg err";
+      msg.textContent = `That could be ${r.ambiguous.slice(0, 3).map(o => o[0]).join(" or ")}. Be a little more specific.`;
+      drawSug();
+      return;
+    }
+    const pts = pointsFor(Q, r.opt[2]);
+    results.push({ opt: r.opt, pts, typed: input.value.trim(), corrected: r.corrected });
+    renderReveal();
+  });
+  input.focus({ preventScroll: true });
+}
+
+function renderReveal() {
+  drawPips();
+  const Q = QUESTIONS[idx];
+  const res = results[idx];
+  const sorted = [...Q.options].sort((a, b) => a[2] - b[2]);
+  const show = Q.only ? sorted.slice(0, 1) : sorted.filter(o => o[2] <= 3);
+  if (!show.includes(res.opt)) show.push(res.opt);
+
+  const rows = [];
+  show.forEach((o, i) => {
+    if (i > 0 && o[2] > show[i - 1][2] + 1 && o === res.opt && !Q.only) rows.push(`<li class="gap">⋯</li>`);
+    if (Q.only && o === res.opt && i > 0) rows.push(`<li class="gap">⋯</li>`);
+    const mine = o === res.opt;
+    const label = Q.only && o[2] !== 1 ? "✕" : `#${o[2]}`;
+    rows.push(`<li class="row ${o[2] === 1 ? "top" : ""} ${mine ? "mine" : ""}">
+      <span class="rk">${label}</span>
+      <span class="nm">${esc(o[0])}${mine ? '<span class="you">her pick</span>' : ""}</span>
+      <span class="pts">${pointsFor(Q, o[2])}</span></li>`);
+  });
+
+  const lines = {
+    100: ["Perfect. Of course you knew that, Princess.", "Top answer!", "Nailed it."],
+    hi: ["So close!", "Just shy of the top spot."],
+    mid: ["Not bad, not the top.", "Hmm, interesting choice."],
+    lo: ["Bold guess.", "Respectfully… no."],
+    zero: ["Wrong! The answer is always Samara."],
+  };
+  const pick = a => a[idx % a.length];
+  const v = res.pts === 100 ? pick(lines[100]) : res.pts >= 75 ? pick(lines.hi) : res.pts >= 40 ? pick(lines.mid) : res.pts > 0 ? pick(lines.lo) : pick(lines.zero);
+  const fix = res.corrected ? `<p class="msg fix">Autocorrected "${esc(res.typed)}" to ${esc(res.opt[0])}.</p>` : "";
+  const last = idx === QUESTIONS.length - 1;
+
+  stage.innerHTML = `
+    <section class="card">
+      <div class="qnum">Question ${idx + 1} of ${QUESTIONS.length}</div>
+      <h2 class="qtext">${esc(Q.q)}</h2>
+      ${fix}
+      <div class="sky" id="sky" aria-hidden="true">
+        ${[25, 50, 75, 100].map(p => `<div class="tick ${p === 100 ? "max" : ""}" data-p="${p}">${p}</div>`).join("")}
+        <div class="streak" id="streak"></div>
+        <svg class="lcrown" id="lcrown" viewBox="0 0 54 40"><path fill="currentColor" d="M4 12l11 10L27 4l12 18 11-10-5 22H9z"/><rect x="9" y="35" width="36" height="4" rx="2" fill="currentColor"/><circle cx="4" cy="11" r="3" fill="currentColor"/><circle cx="27" cy="4" r="3" fill="currentColor"/><circle cx="50" cy="11" r="3" fill="currentColor"/></svg>
+      </div>
+      <p class="verdict">${esc(v)} <span class="score">+${res.pts}</span></p>
+      <ol class="board">${rows.join("")}</ol>
+      <div class="actions"><button id="next">${last ? "See my score" : "Next question"}</button></div>
+    </section>`;
+  const nb = document.getElementById("next");
+  nb.focus({ preventScroll: true });
+  nb.addEventListener("click", () => {
+    idx++;
+    if (idx < QUESTIONS.length) renderQuestion(); else renderEnd();
+  });
+  launch(res.pts);
+}
+
+// ---------- crown launch ----------
+function launch(pts) {
+  const sky = document.getElementById("sky");
+  const crown = document.getElementById("lcrown");
+  const streak = document.getElementById("streak");
+  const H = sky.clientHeight, base = 14, ch = 45;
+  const maxY = H - base - ch - 12;            // height of the 100 line (crown's bottom)
+  const target = (pts / 100) * maxY;
+  sky.querySelectorAll(".tick").forEach(t => { t.style.bottom = (base + (t.dataset.p / 100) * maxY + ch / 2) + "px"; });
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const done = () => {
+    if (pts === 100) { crown.classList.add("glow"); burst(sky, base + target + ch / 2, 22, 110); }
+    else if (pts >= 75) burst(sky, base + target + ch / 2, 10, 60);
+  };
+  if (reduce || !crown.animate) {
+    crown.style.transform = pts === 0 ? "rotate(-28deg)" : `translateY(${-target}px)`;
+    streak.style.height = target + "px";
+    done();
+    return;
+  }
+  const opts = { fill: "forwards" };
+  if (pts === 100) {
+    const off = -(H + 40);
+    crown.animate([
+      { transform: "translateY(0) scale(1)" },
+      { transform: "translateY(3px) scale(1.18, .78)", offset: .12, easing: "cubic-bezier(.5,0,.9,.4)" },
+      { transform: `translateY(${off}px) scale(.85, 1.25)`, offset: .45 },
+      { transform: `translateY(${off}px) scale(1)`, offset: .62, easing: "cubic-bezier(.2,.9,.3,1.25)" },
+      { transform: `translateY(${-target}px) scale(1)`, offset: 1 },
+    ], { ...opts, duration: 2000 });
+    streak.animate([
+      { height: "0px", opacity: .55 },
+      { height: "0px", offset: .12 },
+      { height: H + "px", opacity: .7, offset: .45 },
+      { height: H + "px", opacity: 0, offset: .7 },
+      { height: target + "px", opacity: .4 },
+    ], { ...opts, duration: 2000 });
+    setTimeout(() => burst(sky, H - 6, 16, 90), 900);
+    setTimeout(done, 2000);
+  } else if (pts === 0) {
+    crown.animate([
+      { transform: "translateY(0) rotate(0)" },
+      { transform: "translateY(-14px) rotate(6deg)", offset: .3, easing: "ease-in" },
+      { transform: "translateY(0) rotate(-8deg)", offset: .55 },
+      { transform: "translateY(0) rotate(-28deg)" },
+    ], { ...opts, duration: 900, easing: "ease-out" });
+  } else {
+    const dur = 700 + pts * 9;
+    crown.animate([
+      { transform: "translateY(0) scale(1)" },
+      { transform: "translateY(2px) scale(1.1, .85)", offset: .15, easing: "cubic-bezier(.2,.8,.3,1)" },
+      { transform: `translateY(${-target - Math.min(16, pts / 5)}px) scale(.95, 1.08)`, offset: .75, easing: "ease-in-out" },
+      { transform: `translateY(${-target}px) scale(1)` },
+    ], { ...opts, duration: dur });
+    streak.animate([
+      { height: "0px" }, { height: "0px", offset: .15 }, { height: target + "px" },
+    ], { ...opts, duration: dur * .8, easing: "cubic-bezier(.2,.8,.3,1)" });
+    setTimeout(done, dur);
+  }
+}
+
+function burst(sky, y, n, dist) {
+  const colors = ["var(--gold)", "var(--accent)", "var(--line)"];
+  const x = sky.clientWidth / 2;
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement("span");
+    s.className = "spark";
+    s.style.left = (x - 4) + "px";
+    s.style.bottom = (y - 4) + "px";
+    s.style.background = colors[i % colors.length];
+    sky.appendChild(s);
+    const a = Math.random() * Math.PI * 2, d = dist * (.4 + Math.random() * .6);
+    s.animate([
+      { transform: "translate(0,0) scale(1)", opacity: 1 },
+      { transform: `translate(${Math.cos(a) * d}px, ${-Math.sin(a) * d}px) scale(.3)`, opacity: 0 },
+    ], { duration: 700 + Math.random() * 400, easing: "cubic-bezier(.1,.7,.3,1)" }).onfinish = () => s.remove();
+  }
+}
+
+function emojiFor(p) { return p === 100 ? "👑" : p >= 75 ? "💗" : p >= 40 ? "🌸" : p > 0 ? "🤍" : "❌"; }
+
+function renderEnd() {
+  drawPips();
+  const total = results.reduce((s, r) => s + r.pts, 0);
+  const grid = results.map(r => emojiFor(r.pts)).join("");
+  const title = total === 500 ? "A flawless sortie. Royalty confirmed."
+    : total >= 400 ? "Practically perfect. The crown fits."
+    : total >= 250 ? "A respectable reign."
+    : "The kingdom has questions.";
+  stage.innerHTML = `
+    <section class="card">
+      <div class="qnum">Final score</div>
+      <div class="total">${total}<small> / 500</small></div>
+      <div class="grid" aria-label="Score by question">${grid}</div>
+      <h2 class="qtext" style="text-align:center">${esc(title)}</h2>
+      <ul class="summary">
+        ${results.map((r, i) => `<li><span>${i + 1}. ${esc(r.opt[0])}</span><b>${r.pts}</b></li>`).join("")}
+      </ul>
+      <p class="letter">Happy National Princess Day, Samara. You'll always be the top answer. 👑</p>
+      <div class="actions">
+        <button id="share">Copy my results</button>
+        <button id="again" class="ghost">Play again</button>
+      </div>
+      <p class="msg" id="smsg" role="status" style="text-align:center"></p>
+    </section>`;
+  const text = `The Princess Sortie 👑 Nov 18\n${grid}\n${total}/500`;
+  document.getElementById("share").addEventListener("click", () => {
+    const m = document.getElementById("smsg");
+    navigator.clipboard?.writeText(text).then(() => { m.textContent = "Copied! Paste it anywhere."; },
+      () => { m.textContent = text; })
+      ?? (m.textContent = text);
+  });
+  document.getElementById("again").addEventListener("click", () => { idx = 0; results = []; renderQuestion(); });
+}
+
+renderQuestion();
+</script>
+</body>
+</html>
